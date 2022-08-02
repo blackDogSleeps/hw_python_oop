@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 
 @dataclass
@@ -9,18 +9,14 @@ class InfoMessage:
     distance: float
     speed: float
     calories: float
-    message = ('Тип тренировки: {training_type}; '
-               + 'Длительность: {duration:.3f} ч.; '
-               + 'Дистанция: {distance:.3f} км; '
-               + 'Ср. скорость: {speed:.3f} км/ч; '
-               + 'Потрачено ккал: {calories:.3f}.')
+    MESSAGE = ('Тип тренировки: {training_type}; '
+               'Длительность: {duration:.3f} ч.; '
+               'Дистанция: {distance:.3f} км; '
+               'Ср. скорость: {speed:.3f} км/ч; '
+               'Потрачено ккал: {calories:.3f}.')
 
     def get_message(self) -> str:
-        return self.message.format(training_type=self.training_type,
-                                   duration=self.duration,
-                                   distance=self.distance,
-                                   speed=self.speed,
-                                   calories=self.calories)
+        return self.MESSAGE.format(**asdict(self))
 
 
 class Training:
@@ -57,16 +53,16 @@ class Training:
 
 class Running(Training):
     """Тренировка: бег."""
-    CALORIES_FORMULA_CONST_1: float = 18
-    CALORIES_FORMULA_CONST_2: float = 20
+    CORRECTION_COEFFICIENT_1: float = 18
+    CORRECTION_COEFFICIENT_2: float = 20
 
     def __init__(self, action: int, duration: float, weight: float):
         super().__init__(action, duration, weight)
 
     def get_spent_calories(self) -> float:
-        return ((self.CALORIES_FORMULA_CONST_1
+        return ((self.CORRECTION_COEFFICIENT_1
                 * self.get_mean_speed()
-                - self.CALORIES_FORMULA_CONST_2)
+                - self.CORRECTION_COEFFICIENT_2)
                 * self.weight_in_kg
                 / self.M_IN_KM
                 * (self.duration_in_hours * self.MINUTES_IN_HOUR))
@@ -74,8 +70,8 @@ class Running(Training):
 
 class SportsWalking(Training):
     """Тренировка: спортивная ходьба."""
-    CALORIES_FORMULA_CONST_1: float = 0.035
-    CALORIES_FORMULA_CONST_2: float = 0.029
+    CORRECTION_COEFFICIENT_1: float = 0.035
+    CORRECTION_COEFFICIENT_2: float = 0.029
 
     def __init__(self,
                  action: int,
@@ -86,10 +82,10 @@ class SportsWalking(Training):
         self.height_in_cm: float = height
 
     def get_spent_calories(self) -> float:
-        return ((self.CALORIES_FORMULA_CONST_1
+        return ((self.CORRECTION_COEFFICIENT_1
                 * self.weight_in_kg
                 + (self.get_mean_speed()**2 // self.height_in_cm)
-                * self.CALORIES_FORMULA_CONST_2
+                * self.CORRECTION_COEFFICIENT_2
                 * self.weight_in_kg)
                 * (self.duration_in_hours * self.MINUTES_IN_HOUR))
 
@@ -97,8 +93,8 @@ class SportsWalking(Training):
 class Swimming(Training):
     """Тренировка: плавание."""
     LEN_STEP: float = 1.38
-    CALORIES_FORMULA_CONST_1: float = 1.1
-    CALORIES_FORMULA_CONST_2: float = 2
+    CORRECTION_COEFFICIENT_1: float = 1.1
+    CORRECTION_COEFFICIENT_2: float = 2
 
     def __init__(self,
                  action: int,
@@ -118,21 +114,21 @@ class Swimming(Training):
 
     def get_spent_calories(self) -> float:
         return ((self.get_mean_speed()
-                + self.CALORIES_FORMULA_CONST_1)
-                * self.CALORIES_FORMULA_CONST_2
+                + self.CORRECTION_COEFFICIENT_1)
+                * self.CORRECTION_COEFFICIENT_2
                 * self.weight_in_kg)
 
 
 def read_package(workout_type: str, data: list) -> Training:
     """Прочитать данные полученные от датчиков."""
-    table: dict[str, type] = {
+    table: dict[str, type[Training]] = {
         'SWM': Swimming,
         'RUN': Running,
         'WLK': SportsWalking,
     }
 
     if workout_type not in table:
-        raise KeyError('Нет такого вида тренировки')
+        raise ValueError('Нет такого вида тренировки')
     else:
         return table[workout_type](*data)
 
